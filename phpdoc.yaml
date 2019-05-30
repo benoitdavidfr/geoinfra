@@ -1,0 +1,42 @@
+title: ne - API d'accès à la base Natural Earth comme exemple de service geojson
+path: /geoapi/ne
+doc: |
+  L'objectif est démontrer la mise en oeuvre de la géoinfra
+  
+  Points d'accès:
+    localhost:
+      - http://localhost/geoapi/ne/index.php
+    sur_geoapi:
+      - http://ne.geoapi.fr/ -> description du catalogue des bases
+      - http://ne.geoapi.fr/schema -> schema du catalogue
+      - http://ne.geoapi.fr/items -> contenu du catalogue
+        - http://ne.geoapi.fr/ne_110m
+        - http://ne.geoapi.fr/ne_10m
+      - http://ne.geoapi.fr/ne_110m -> catalogue des collections
+      - http://ne.geoapi.fr/ne_110m/schema
+      - http://ne.geoapi.fr/ne_110m/items
+        - http://ne.geoapi.fr/ne_110m/collections/coastline
+      - http://ne.geoapi.fr/ne_110m/collections/coastline -> descr de la FeatureCollection
+      - http://ne.geoapi.fr/ne_110m/collections/coastline/schema -> schema de la FeatureCollection
+      - http://ne.geoapi.fr/ne_110m/collections/coastline/items -> contenu de la FeatureCollection      
+    
+    http://localhost/geoapi/igngp/tile.php
+    http://localhost/geoapi/igngp/tile.php/orthos
+    http://localhost/geoapi/igngp/tile.php/orthos/8/129/88.jpg
+    http://localhost/geoapi/igngp/tile.php/cartes/8/129/88.jpg
+    http://igngp.geoapi.fr/tile.php
+    http://igngp.geoapi.fr/tile.php/orthos
+    http://igngp.geoapi.fr/tile.php/orthos/8/129/88.jpg
+    http://tile.openstreetmap.org/8/129/88.png
+    
+journal: |
+  30/5/2019:
+    création
+    
+sqlDBs:
+  - name: mysql:ne_110m
+    title: base de données ne_110m contenant NE 110m créée sur MySQL docker et bdavid.alwaysdata.net:bdavid_ne_110m
+phpScripts:
+  - /geoapi/ne/index.php
+phpIncludes:
+htmlFiles:
