@@ -1,0 +1,125 @@
+title: geoinfra - spécification de l'infrastructure de données geoinfra
+journal: |
+  31/5/2019:
+    - revisite après implem
+  30/5/2019:
+    - renommages
+  29/5/2019:
+    - refonte
+  28/5/2019:
+    - création
+specs:
+  intro:
+    Dans cette nouvelle infra:
+      - les données géographiques sont organisées en:
+        - données vecteur structurées en GeoJSON
+        - données maillées (au format NetCDF ?)
+        - données de consultation correspondant à des images PNG/JPEG géoréférencées
+      - ces données sont exposées sur le web au travers de 5 types de web-services:
+        - les web-services GeoJSON (gjson)
+        - les web-services de données maillées
+        - les web-services de consultation de tuiles (de facto XYZ standard) (tiles)
+        - les services OGC-WMS (wms)
+        - les catalogues (geocat) qui exposent une arborescence des web-services et des cartes
+  geojson:
+    - un web-service GeoJSON expose une FeatureCollection
+    - est identifié par un URI de base noté {gjuri}
+    - définit les URL suivantes:
+      - {gjuri} renvoie la description du service et les MD de la collection
+        - type=http://id.georef.eu/geoinfra/GeoJSON
+      - {gjuri}/api renvoie la définition de l'API de la collection {gjuri}
+      - {gjuri}/schema renvoie le schema des propriétés des objets de la collection {gjuri}
+      - {gjuri}/items renvoie le contenu de la collection {gjuri}
+      - {gjuri}/items?{criteria} renvoie une sélection de la collection {gjuri} définie par {criteria}
+      - {gjuri}/items/{fid} renvoie l'objet {fid} de la collection {gjuri}
+    examples:
+      - http://gi.geoapi.fr/ne_110m/collections/coastline - la table coastline du schema ne_110m du serveur MySql
+      - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline
+        - le fichier /geovect/fcoll/ne110m/coastline.geojson
+  tiles:
+    - un web-service de consultation expose une couche correspondant à une image géoréférencée PNG ou JPG
+    - est identifié par un URI noté {tileuri}
+    - définit les URL suivantes:
+      - {tileuri} renvoie la description du service et de la couche
+        - type=http://id.georef.eu/geoinfra/tile
+      - {tileuri}/{z}/{x}/{y}.(png|jpg) renvoie l'image correspondant à la tuile
+      - documenta dans https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+  geocat:
+    - un web-service catalogue est implémenté comme un web-service particulier de FeatureCollection
+      - type=http://id.georef.eu/geoinfra/geocat
+    - est identifié par un URI de base noté {caturi}
+    - les Feature de la FeatureCollection sont
+      - des web-services GeoJSON (type=http://id.georef.eu/geoinfra/GeoJSON)
+      - des web-services image
+      - des web-services de consultation de tuiles (type=http://id.georef.eu/geoinfra/tile)
+      - des services WMS (type=http://www.opengis.net/wms)
+      - des cartes (type=http://id.georef.eu/geoinfra/map)
+      - des catalogues (type=http://id.georef.eu/geoinfra/geocat)
+    - schema minimum des objets
+      identifier: URI de l'objet
+      title: titre en clair
+      type: type de l'objet
+      deleted: boolean
+      modified: date de dernière modification
+      la géométrie du Feature fournit l'extension du service
+    - les objets détruits sont conservés avec deleted=true permettant ainsi de retrouver facilement les évolutions entre 2 dates
+  map:
+    - une carte est définie par
+    - des métadonnées (titre, ...)
+    - le type http://id.georef.eu/geoinfra/map
+    - une extension définie par un BBox en coordonnées géographiques (GBox)
+    - une projection pour l'affichage définie par un code EPSG
+    - une liste de couches, chacune soit
+      - une couche d'un service de consultation
+        - associée à un copyright
+      - un GeoJsonWs associé à
+        - d'éventuels critères de sélection
+        - un éventuel style de représentation
+Mapping:
+  fichiers:
+    url: http://{host}/geoinfra/file.php/encoded_path/
+    répertoire:
+      geoinfra: catalogue
+      examples:
+        - /geovect/fcoll
+        - /geovect/fcoll/ne110m
+      wsUri: http://{host}/geoinfra/file.php/geovect%2Ffcoll
+      url:
+        - http://{host}/geoinfra/file.php/geovect%2Ffcoll
+        - http://{host}/geoinfra/file.php/geovect%2Ffcoll/items
+          - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m
+    fichierGeoJsonOuShp:
+      geoinfra: collection
+      example: /geovect/fcoll/ne110m/coastline.geojson
+      wsUri: http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline
+      url:
+        - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline
+        - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline/items
+  wfs:
+
+miseEnOeuvre:
+  webservices:
+    igngp.geoapi.fr:
+      title: proxy des service du Géoportail
+      /tile.php/{layer}: service de tuiles
+      /geocat.php: catalogue des ressources du Géoportail
+      /geojson.php: accès aux données vecteur en GeoJSON
+    gi.geoapi.fr:
+      title: racine du catalogue de la géoinfra
+  viewer:
+    infra.gexplor.fr: |
+      viewer permettant:
+        - de naviguer dans l'infra à partir du catalogue principal
+        - de sélectionner une carte
+        - de la mettre à jour sous réserve de connaitre son mot de passe
+        - d'en créer une
+        - de zoomer dans la carte
+        - d'ajouter/supprimer des couches
+        - d'éditer le style d'une couche
+  spec:
+    id.georef.eu/geoinfra:
+      sert de racine d'URI pour geoinfra
+      
+architectureDuViewer:
+  - navigation d'URL en URL avec possibilité d'utiliser le retour arrière du navigateur sans perdre la carte courante
+  - enregistrement de la carte courante en session
