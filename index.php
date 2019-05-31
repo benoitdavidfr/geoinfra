@@ -127,6 +127,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
       ],
     ],
   ];
+  $mysqlSchemaNamePrefix = ($_SERVER['HTTP_HOST'] == 'localhost') ? '' : 'bdavid_';
   
   // "/schema" - schema à faire
   if ($path_info == '/schema') {
@@ -143,7 +144,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   // "/items" : liste des éléments de premier niveau du catalogue
   if ($path_info == '/items') {
     $items = [];
-    $query = "select * from geoinfra.geocat where parent is null";
+    $query = "select * from ${mysqlSchemaNamePrefix}geoinfra.geocat where parent is null";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
       $items[] = [
@@ -167,7 +168,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   // "/{id}" - description soit d'un noeud intermédiaire du catalogue soit d'une base MySql composée de tables
   if (preg_match('!^/([^/]+)$!', $path_info, $matches)) {
     $id = $matches[1];
-    $query = "select type, title from geoinfra.geocat where id='$id'";
+    $query = "select type, title from ${mysqlSchemaNamePrefix}geoinfra.geocat where id='$id'";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
     }
@@ -217,12 +218,12 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   // "/{id}/items" - soit liste des sous-elts du catalogue soit liste des collections de la base
   if (preg_match('!^/([^/]+)/items$!', $path_info, $matches)) {
     $id = $matches[1];
-    $query = "select type from geoinfra.geocat where id='$id'";
+    $query = "select type from ${mysqlSchemaNamePrefix}geoinfra.geocat where id='$id'";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
     }
     if ($tuple['type']=='node') { // l'objet courant est un noeud intermédiaire du catalogue
-      $query = "select * from geoinfra.geocat where parent='$id'";
+      $query = "select * from ${mysqlSchemaNamePrefix}geoinfra.geocat where parent='$id'";
       foreach(MySql::query($query) as $tuple) {
         //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
         $items[] = [
@@ -241,10 +242,9 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
       }
     }
     elseif ($tuple['type']=='schemaMySql') { // l'objet courant est un schema MySql
-      $prefix = ($_SERVER['HTTP_HOST'] == 'localhost') ? '' : 'bdavid_';
       $items = [];
       $query = "select distinct table_name from information_schema.columns "
-        ."where table_schema='$prefix$id' and data_type='geometry'";
+        ."where table_schema='${mysqlSchemaNamePrefix}$id' and data_type='geometry'";
       foreach(MySql::query($query) as $tuple) {
         //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
         $items[] = [
