@@ -1,42 +1,42 @@
-title: ne - API d'accès à la base Natural Earth comme exemple de service geojson
-path: /geoapi/ne
+title: geoinfra - racine de la geoinfra
+path: /geoapi/geoinfra
 doc: |
   L'objectif est démontrer la mise en oeuvre de la géoinfra
   
   Points d'accès:
     localhost:
-      - http://localhost/geoapi/ne/index.php
+      - http://localhost/geoapi/geoinfra/index.php
     sur_geoapi:
-      - http://ne.geoapi.fr/ -> description du catalogue des bases
-      - http://ne.geoapi.fr/schema -> schema du catalogue
-      - http://ne.geoapi.fr/items -> contenu du catalogue
-        - http://ne.geoapi.fr/ne_110m
-        - http://ne.geoapi.fr/ne_10m
-      - http://ne.geoapi.fr/ne_110m -> catalogue des collections
-      - http://ne.geoapi.fr/ne_110m/schema
-      - http://ne.geoapi.fr/ne_110m/items
-        - http://ne.geoapi.fr/ne_110m/collections/coastline
-      - http://ne.geoapi.fr/ne_110m/collections/coastline -> descr de la FeatureCollection
-      - http://ne.geoapi.fr/ne_110m/collections/coastline/schema -> schema de la FeatureCollection
-      - http://ne.geoapi.fr/ne_110m/collections/coastline/items -> contenu de la FeatureCollection      
-    
-    http://localhost/geoapi/igngp/tile.php
-    http://localhost/geoapi/igngp/tile.php/orthos
-    http://localhost/geoapi/igngp/tile.php/orthos/8/129/88.jpg
-    http://localhost/geoapi/igngp/tile.php/cartes/8/129/88.jpg
-    http://igngp.geoapi.fr/tile.php
-    http://igngp.geoapi.fr/tile.php/orthos
-    http://igngp.geoapi.fr/tile.php/orthos/8/129/88.jpg
-    http://tile.openstreetmap.org/8/129/88.png
+      - http://gi.geoapi.fr/ -> description du catalogue des bases
+      - http://gi.geoapi.fr/schema -> schema du catalogue
+      - http://gi.geoapi.fr/items -> élts de premier niveau du catalogue
+        - http://gi.geoapi.fr/ne
+        - http://gi.geoapi.fr/ign
+      - http://gi.geoapi.fr/ne -> description du catalogue des bases de NE
+      - http://gi.geoapi.fr/ne/schema -> schema des elts
+      - http://gi.geoapi.fr/ne/items -> bases de NE
+        - http://gi.geoapi.fr/ne_110m
+        - http://gi.geoapi.fr/ne_10m
+      - http://gi.geoapi.fr/ne_110m -> catalogue des collections
+      - http://gi.geoapi.fr/ne_110m/schema
+      - http://gi.geoapi.fr/ne_110m/items
+        - http://gi.geoapi.fr/ne_110m/collections/coastline
+      - http://gi.geoapi.fr/ne_110m/collections/coastline -> descr de la FeatureCollection
+      - http://gi.geoapi.fr/ne_110m/collections/coastline/schema -> schema de la FeatureCollection
+      - http://gi.geoapi.fr/ne_110m/collections/coastline/items -> contenu de la FeatureCollection      
     
 journal: |
+  31/5/2019:
+    - renommage du répertoire en geoinfra et du nom de domaine en gi.geoapi.fr
+    - stockage du catalogue dans geoinfra.ceocat et utilisation dans index.php
   30/5/2019:
     création
     
 sqlDBs:
-  - name: mysql:ne_110m
-    title: base de données ne_110m contenant NE 110m créée sur MySQL docker et bdavid.alwaysdata.net:bdavid_ne_110m
+  - name: mysql:geoinfra
+    title: base de données geoinfra contenant geocat créée sur MySQL docker et bdavid.alwaysdata.net:bdavid_geoinfra
 phpScripts:
-  - /geoapi/ne/index.php
+  - /geoapi/geoinfra/index.php
 phpIncludes:
 htmlFiles:
+  - /geoapi/geoinfra/geocat.sql

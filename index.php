@@ -4,12 +4,18 @@ name: index.php
 title: index.php - accès aux données de Natural Earth stockées dans MySql selon les protocoles geoinfra
 doc: |
   Points d'accès:
-  - / -> description du catalogue des bases
+  - / -> description du catalogue de la géoinfra
+  - /api -> API du catalogue
   - /schema -> schema du catalogue
-  - /items -> contenu du catalogue
+  - /items -> éléments de premier niveau du catalogue
+    - {path}/ne
+    - {path}/ign
+  - /ne -> catalogue des bases NE
+  - /ne/schema
+  - /ne/items
     - {path}/ne_110m
     - {path}/ne_10m
-  - /ne_110m -> catalogue des collections
+  - /ne_110m -> catalogue des collections de NE 1/110 M
   - /ne_110m/schema
   - /ne_110m/items
     - {path}/ne_110m/collections/coastline
@@ -19,7 +25,16 @@ doc: |
   
   synchro par:
     http://localhost/synchro.php?remote=http://prod.geoapi.fr/   
+  
+  AFaire:
+    - pas que ne ! renommer en gidb ? gimy ?
+    - gérer les bases ou les tables inexistantes, renvoyer une erreur 404
+    - spécs des bases ?
+    - sur Alwaysdata supprimer le prefix bdavid_ dans le nom de la table
+
 journal:
+  31/5/2019:
+    - restructuration pour exploiter le catalogue défini dans geoinfra.geocat
   30/5/2019:
     - première version
 */
@@ -28,64 +43,67 @@ require_once __DIR__.'/../../geovect/fcoll/database.inc.php';
 
 use Symfony\Component\Yaml\Yaml;
 
-function main(string $dbParams, string $path, string $path_info) {
-  if (1) { // log
+function geoinfra(string $dbParams, string $script_path, string $path_info, callable $errorCallback): array {
+  if (0) { // log
     file_put_contents(__DIR__.'/log.yaml',Yaml::dump([[
       'date'=> date( DATE_ATOM),
-      'path'=> $path.($_SERVER['QUERY_STRING'] ? "?$_SERVER[QUERY_STRING]"  : ''),
+      'path'=> $script_path.($_SERVER['QUERY_STRING'] ? "?$_SERVER[QUERY_STRING]"  : ''),
       //'$_SERVER'=> $_SERVER,
     ]]), FILE_APPEND);
   }
 
   MySql::open($dbParams);
 
-  header('Content-type: application/json');
-
-  //$path = "http://$_SERVER[HTTP_HOST]".dirname($_SERVER['SCRIPT_NAME']);
-  //die($path);
-
   // racine = descriptif du catalogue des bases + exemples pour tests
   if (!$path_info || ($path_info=='/')) {
-    echo json_encode([
+    return [
       'type'=> 'http://id.georef.eu/geoinfra/geocat',
-      'title'=> "Catalogue des bases de données Natural Earth",
-      'self'=> $path,
-      'api'=> ['title'=> "documentation de l'API", 'href'=> "$path/api"],
-      'schema'=> ['title'=> "schema de description des bases", 'href'=> "$path/schema"],
-      'items'=> ['title'=> "liste des bases", 'href'=> "$path/items"],
+      'title'=> "Catalogue des données et web-services de la géoinfra",
+      'self'=> $script_path,
+      'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/api"],
+      'schema'=> ['title'=> "schema de description des éléments", 'href'=> "$script_path/schema"],
+      'items'=> ['title'=> "liste des éléments", 'href'=> "$script_path/items"],
       'examples'=> [
+        'ne'=> [
+          'title'=> "les bases NE",
+          'href'=> "$script_path/ne/items"
+        ],
+        'ne_110m'=> [
+          'title'=> "les collections de la base NE 1/110 M",
+          'href'=> "$script_path/ne_110m/items"
+        ],
         'coastline'=> [
-          'title'=> "coastline",
-          'href'=> "$path/ne_110m/collections/coastline"],
+          'title'=> "la collection coastline de NE 1/110 M",
+          'href'=> "$script_path/ne_110m/collections/coastline"
+        ],
         'coastline+bbox'=> [
           'title'=> "coastline avec bbox",
-          'href'=> "$path/ne_110m/collections/coastline/items?bbox=[0,0,180,90]"],
+          'href'=> "$script_path/ne_110m/collections/coastline/items?bbox=[0,0,180,90]"
+        ],
         'ne_110m/admin_0_map_units?su_a3=FXX'=> [
           'title'=> "ne_110m admin_0_map_units / su_a3=FXX",
-          'href'=> "$path/ne_110m/collections/admin_0_map_units/items?su_a3=FXX"
+          'href'=> "$script_path/ne_110m/collections/admin_0_map_units/items?su_a3=FXX"
         ],
         'ne_110m/admin_0_map_units?adm0_a3=FRA'=> [
           'title'=> "ne_110m admin_0_map_units / adm0_a3=FRA",
-          'href'=> "$path/ne_110m/collections/admin_0_map_units/items?adm0_a3=FRA"
+          'href'=> "$script_path/ne_110m/collections/admin_0_map_units/items?adm0_a3=FRA"
         ],
         'ne_10m/admin_0_map_units?adm0_a3=FRA'=> [
           'title'=> "ne_10m admin_0_map_units / adm0_a3=FRA",
-          'href'=> "$path/ne_10m/collections/admin_0_map_units/items?adm0_a3=FRA"
+          'href'=> "$script_path/ne_10m/collections/admin_0_map_units/items?adm0_a3=FRA"
         ],
       ],
-    ]);
-    die();
+    ];
   }
 
   // "/api" - doc API à faire, utilité ?
   if ($path_info == '/api') {
-    header("HTTP/1.1 501 Not Implemented");
-    die(json_encode(['error'=> "API definition to be done"]));
+    $errorCallback(501, ['error'=> "API definition to be done"]);
   }
 
-  // "/schema" - schema à faire
-  if ($path_info == '/schema') {
-    $properties = [
+  // caractéristiques réutilisées
+  $common = [
+    'catalog_schema' => [
       'type'=> [
         'description'=> "type de l'élément",
         'type'=> 'string',
@@ -107,95 +125,163 @@ function main(string $dbParams, string $path, string $path_info) {
         'type'=> 'string',
         'format'=> 'date-time',
       ],
-    ];
-    die(json_encode([
+    ],
+  ];
+  
+  // "/schema" - schema à faire
+  if ($path_info == '/schema') {
+    return [
       '$schema'=> 'http://json-schema.org/draft-07/schema#',
-      'id'=> "$path/schema",
+      'id'=> "$script_path/schema",
       'title'=> "Schema des propriétés des objets du catalogue des bases",
       'type'=> 'object',
-      'required'=> array_keys($properties),
-      'properties'=> $properties,
-    ]));
+      'required'=> array_keys($common['catalog_schema']),
+      'properties'=> $common['catalog_schema'],
+    ];
   }
 
-  // "/items" : liste des bases
+  // "/items" : liste des éléments de premier niveau du catalogue
   if ($path_info == '/items') {
     $items = [];
-    $query = "select distinct table_schema from information_schema.columns where data_type='geometry'";
+    $query = "select * from geoinfra.geocat where parent is null";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
       $items[] = [
         'properties'=> [
           'type'=> 'http://id.georef.eu/geoinfra/geocat',
-          'title'=> $tuple['table_schema'],
-          'identifier'=> "$path/$tuple[table_schema]",
-          'deleted'=> false,
-          'modified'=> '2019-05-30T12:00:00+00:00',
+          'title'=> $tuple['title'],
+          'identifier'=> "$script_path/$tuple[id]",
+          'deleted'=> $tuple['deleted']<>'false',
+          //'modified'=> '2019-05-30T12:00:00+00:00',
+          'modified'=> $tuple['modified'],
         ],
       ];
     }
     MySql::close();
-    echo json_encode([
+    return [
       'type'=> 'FeatureCollection',
       'features'=> $items,
-    ]);
-    die();
+    ];
   }
 
-  // "/{base}" - base = catalogue des tables
+  // "/{id}" - description soit d'un noeud intermédiaire du catalogue soit d'une base MySql composée de tables
   if (preg_match('!^/([^/]+)$!', $path_info, $matches)) {
-    $basename = $matches[1];
-    echo json_encode([
-      'type'=> 'http://id.georef.eu/geoinfra/geocat',
-      'title'=> "Catalogue des collections de $basename",
-      'self'=> "$path/$basename",
-      'api'=> ['title'=> "documentation de l'API", 'href'=> "$path/$basename/api"],
-      'schema'=> ['title'=> "schema de description des collections", 'href'=> "$path/$basename/schema"],
-      'items'=> ['title'=> "liste des collections", 'href'=> "$path/$basename/items"],
-    ]);
-    die();
-  }
-
-  // "/{base}/items" - liste des collections d'une base
-  if (preg_match('!^/([^/]+)/items$!', $path_info, $matches)) {
-    $basename = $matches[1];
-    $collections = [];
-    $query = "select distinct table_name from information_schema.columns "
-      ."where table_schema='$basename' and data_type='geometry'";
+    $id = $matches[1];
+    $query = "select type, title from geoinfra.geocat where id='$id'";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
-      $collections[] = [
-        'properties'=> [
-          'type'=> 'http://id.georef.eu/geoinfra/GeoJSON',
-          'title'=> "$tuple[table_name]",
-          'identifier'=> "$path/$basename/collections/$tuple[table_name]",
-          'deleted'=> false,
-          'modified'=> '2019-05-30T12:00:00+00:00',
-        ],
-        'geometry'=> [
-          'type'=> 'Polygon',
-          'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
-        ]
-      ];
     }
     MySql::close();
-    die(json_encode([
+    if ($tuple['type']=='node') {
+      return [
+        'type'=> 'http://id.georef.eu/geoinfra/geocat',
+        'title'=> $tuple['title'],
+        'self'=> "$script_path/$id",
+        'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/$id/api"],
+        'schema'=> ['title'=> "schema de description des éléments", 'href'=> "$script_path/$id/schema"],
+        'items'=> ['title'=> "liste des éléments", 'href'=> "$script_path/$id/items"],
+      ];
+    }
+    elseif ($tuple['type']=='schemaMySql') {
+      return [
+        'type'=> 'http://id.georef.eu/geoinfra/geocat',
+        'title'=> $tuple['title'],
+        'self'=> "$script_path/$id",
+        'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/$id/api"],
+        'schema'=> ['title'=> "schema de description des collections", 'href'=> "$script_path/$id/schema"],
+        'items'=> ['title'=> "liste des collections", 'href'=> "$script_path/$id/items"],
+      ];
+    }
+    else
+      $errorCallback(501, ['error'=> "fonctionnalité non implémentée pour type=$tuple[type]"]);
+  }
+
+  // "/{base}/api" - API des collections de la base
+  if ($path_info == '/api') {
+    $errorCallback(501, ['error'=> "API definition to be done"]);
+  }
+
+  // "/{base}/schema" - schema des collections de la base
+  if (preg_match('!^/([^/]+)/schema$!', $path_info, $matches)) {
+    $basename = $matches[1];
+    return [
+      '$schema'=> 'http://json-schema.org/draft-07/schema#',
+      'id'=> "$script_path/schema/$basename",
+      'title'=> "Schema des propriétés des objets du catalogue des collections de la base $basename",
+      'type'=> 'object',
+      'required'=> array_keys($common['catalog_schema']),
+      'properties'=> $common['catalog_schema'],
+    ];
+  }
+  
+  // "/{id}/items" - soit liste des sous-elts du catalogue soit liste des collections de la base
+  if (preg_match('!^/([^/]+)/items$!', $path_info, $matches)) {
+    $id = $matches[1];
+    $query = "select type from geoinfra.geocat where id='$id'";
+    foreach(MySql::query($query) as $tuple) {
+      //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
+    }
+    if ($tuple['type']=='node') { // l'objet courant est un noeud intermédiaire du catalogue
+      $query = "select * from geoinfra.geocat where parent='$id'";
+      foreach(MySql::query($query) as $tuple) {
+        //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
+        $items[] = [
+          'properties'=> [
+            'type'=> 'http://id.georef.eu/geoinfra/geocat',
+            'title'=> $tuple['title'],
+            'identifier'=> "$script_path/$tuple[id]",
+            'deleted'=> $tuple['deleted']<>'false',
+            'modified'=> $tuple['modified'],
+          ],
+          'geometry'=> [
+            'type'=> 'Polygon',
+            'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+          ],
+        ];
+      }
+    }
+    elseif ($tuple['type']=='schemaMySql') { // l'objet courant est un schema MySql
+      $prefix = ($_SERVER['HTTP_HOST'] == 'localhost') ? '' : 'bdavid_';
+      $items = [];
+      $query = "select distinct table_name from information_schema.columns "
+        ."where table_schema='$prefix$id' and data_type='geometry'";
+      foreach(MySql::query($query) as $tuple) {
+        //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
+        $items[] = [
+          'properties'=> [
+            'type'=> 'http://id.georef.eu/geoinfra/GeoJSON',
+            'title'=> "$tuple[table_name]",
+            'identifier'=> "$script_path/$id/collections/$tuple[table_name]",
+            'deleted'=> false,
+            'modified'=> '2019-05-30T12:00:00+00:00',
+          ],
+          'geometry'=> [
+            'type'=> 'Polygon',
+            'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+          ],
+        ];
+      }
+    }
+    else
+      $errorCallback(501, ['error'=> "fonctionnalité non implémentée pour type=$tuple[type]"]);
+    
+    MySql::close();
+    return [
       'type'=> 'FeatureCollection',
-      'features'=> $collections,
-    ]));
+      'features'=> $items,
+    ];
   }
 
   // "/{base}/collections/{collname}"
   if (preg_match('!^/([^/]+)/collections/([^/]+)$!', $path_info, $matches)) {
     $basename = $matches[1];
     $collname = $matches[2];
-    echo json_encode([
+    return [
       'title'=> $collname,
-      'self'=> "$path/$basename/collections/$collname",
-      'schema'=> "$path/$basename/collections/$collname/schema",
-      'items'=> "$path/$basename/collections/$collname/items",
-    ]);
-    die();
+      'self'=> "$script_path/$basename/collections/$collname",
+      'schema'=> "$script_path/$basename/collections/$collname/schema",
+      'items'=> "$script_path/$basename/collections/$collname/items",
+    ];
   }
 
   // conversion de type MySql -> JSON Schema
@@ -209,7 +295,7 @@ function main(string $dbParams, string $path, string $path_info) {
     }
   }
 
-  // "/{schema}/collections/{collname}/schema"
+  // "/{base}/collections/{collname}/schema"
   if (preg_match('!^/([^/]+)/collections/([^/]+)/schema$!', $path_info, $matches)) {
     $basename = $matches[1];
     $collname = $matches[2];
@@ -224,14 +310,14 @@ function main(string $dbParams, string $path, string $path_info) {
       ];
     }
     MySql::close();
-    die(json_encode([
+    return [
       '$schema'=> 'http://json-schema.org/draft-04/schema#',
-      'id'=> "$path/$basename/collections/$collname/schema",
+      'id'=> "$script_path/$basename/collections/$collname/schema",
       'title'=> "Schema des propriétés des objets de la collection $basename.$collname déduit du schema de la table dans MySql",
       'type'=> 'object',
       'required'=> array_keys($properties),
       'properties'=> $properties,
-    ]));
+    ];
   }
 
   // "/{base}/{table}/items"
@@ -246,10 +332,11 @@ function main(string $dbParams, string $path, string $path_info) {
         $criteria['bbox'] = json_decode($criteria['bbox']);
     }
     $table = new \fcoll\Table('', $dbParams, "$schemaname.$collname");
+    header('Content-type: application/json');
     echo '{"type":"FeatureCollection",',"\n";
     $query = [
-      'schema'=> "$path/$schemaname",
-      'collection'=> "$path/$schemaname/collections/$collname",
+      'schema'=> "$script_path/$schemaname",
+      'collection'=> "$script_path/$schemaname/collections/$collname",
     ];
     if ($criteria)
       $query['criteria'] = $criteria;
@@ -264,6 +351,7 @@ function main(string $dbParams, string $path, string $path_info) {
   }
 }
 
+
 if (__FILE__ == $_SERVER['SCRIPT_FILENAME']) {
   // paramètres de BD / host
   $dbParamsByHost = [
@@ -272,6 +360,7 @@ if (__FILE__ == $_SERVER['SCRIPT_FILENAME']) {
     'bdavid.alwaysdata.net'=> 'mysql://bdavid@mysql-bdavid.alwaysdata.net/',
     'geoapi.fr'=> 'mysql://bdavid@mysql-bdavid.alwaysdata.net/',
     'ne.geoapi.fr'=> 'mysql://bdavid@mysql-bdavid.alwaysdata.net/',
+    'gi.geoapi.fr'=> 'mysql://bdavid@mysql-bdavid.alwaysdata.net/',
     //'bdavid.alwaysdata.net'=> 'pgsql://bdavid@postgresql-bdavid.alwaysdata.net/',
   ];
   //die(json_encode($_SERVER));
@@ -282,11 +371,23 @@ if (__FILE__ == $_SERVER['SCRIPT_FILENAME']) {
     die(json_encode(['error'=> "Erreur aucun serveur de BD paramétré pour le host $_SERVER[HTTP_HOST]"]));
   }
   
-  // "/server" pour visualiser la variable $_SERVER
-  if (isset($_SERVER['PATH_INFO']) && ($_SERVER['PATH_INFO'] == '/server'))
-    die(json_encode($_SERVER));
+  $path_info = isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '';
   
-  main($dbParams, "http://$_SERVER[HTTP_HOST]$_SERVER[SCRIPT_NAME]", isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] : '');
+    // "/server" pour visualiser la variable $_SERVER
+  if ($path_info == '/server') die(json_encode($_SERVER));
+  
+  if ($result = geoinfra($dbParams, "http://$_SERVER[HTTP_HOST]$_SERVER[SCRIPT_NAME]", $path_info, 
+      function(int $code, array $message) {
+        $headers = [
+          404 => "Not Found",
+          501 => "Not Implemented",
+        ];
+        header(sprintf('HTTP/1.1 %d %s', $code, $headers[$code] ?? 'header not defined'));
+        die(json_encode($message));
+      })) {
+    header('Content-type: application/json');
+    die(json_encode($result));
+  }
 }
 
 header("HTTP/1.1 404 Not Found");
@@ -296,5 +397,5 @@ die(json_encode([
   '$_SERVER'=> $_SERVER,
   '$_GET'=> $_GET,
   '$_POST'=> $_POST,
-  'error'=> "No match",
+  'error'=> "No match on path_info",
 ]));  
