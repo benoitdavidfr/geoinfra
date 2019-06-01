@@ -279,7 +279,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   if (preg_match('!^/([^/]+)/collections/([^/]+)$!', $path_info, $matches)) {
     $basename = $matches[1];
     $collname = $matches[2];
-    $table = new \fcoll\Table('', $dbParams, "$basename.$collname");
+    $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$basename.$collname");
     return [
       'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
       'title'=> $collname,
@@ -306,7 +306,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     $basename = $matches[1];
     $collname = $matches[2];
     $query = "select ordinal_position, column_name, data_type from information_schema.columns "
-      ."where table_schema='$basename' and table_name='$collname' and data_type<>'geometry' "
+      ."where table_schema='${mysqlSchemaNamePrefix}$basename' and table_name='$collname' and data_type<>'geometry' "
       ."order by ordinal_position";
     $properties = [];
     foreach(MySql::query($query) as $tuple) {
@@ -337,7 +337,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
       if ($name == 'bbox')
         $criteria['bbox'] = explode(',', $criteria['bbox']);
     }
-    $table = new \fcoll\Table('', $dbParams, "$schemaname.$collname");
+    $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$schemaname.$collname");
     header('Content-type: application/json');
     echo '{"type":"FeatureCollection",',"\n";
     $query = [

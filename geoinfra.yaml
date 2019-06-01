@@ -105,22 +105,10 @@ Mapping:
 miseEnOeuvre:
   webservices:
     igngp.geoapi.fr:
-      title: proxy des service du Géoportail
+      title: proxy des services du Géoportail
       /tile.php/{layer}: service de tuiles
       /geocat.php: catalogue des ressources du Géoportail
       /geojson.php: accès aux données vecteur en GeoJSON
-    gi.geoapi.fr:
-      title: racine du catalogue de la géoinfra
-  viewer:
-    infra.gexplor.fr: |
-      viewer permettant:
-        - de naviguer dans l'infra à partir du catalogue principal
-        - de sélectionner une carte
-        - de la mettre à jour sous réserve de connaitre son mot de passe
-        - d'en créer une
-        - de zoomer dans la carte
-        - d'ajouter/supprimer des couches
-        - d'éditer le style d'une couche
   spec:
     id.georef.eu/geoinfra:
       sert de racine d'URI pour geoinfra

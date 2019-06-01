@@ -25,7 +25,11 @@ doc: |
       - http://gi.geoapi.fr/ne_110m/collections/coastline/schema -> schema de la FeatureCollection
       - http://gi.geoapi.fr/ne_110m/collections/coastline/items -> contenu de la FeatureCollection      
     
+  Un navigateur est défini dans /gexplor/gibrowse
+  
 journal: |
+  1/6/2019:
+    - correction bugs détectés grâce à gibrowse
   31/5/2019:
     - renommage du répertoire en geoinfra et du nom de domaine en gi.geoapi.fr
     - stockage du catalogue dans geoinfra.ceocat et utilisation dans index.php
