@@ -1,7 +1,7 @@
 <?php
 /*PhpDoc:
 name: index.php
-title: index.php - accès aux données de Natural Earth stockées dans MySql selon les protocoles geoinfra
+title: index.php - accès aux données de la geoinfra
 doc: |
   Points d'accès:
   - / -> description du catalogue de la géoinfra
@@ -44,10 +44,13 @@ require_once __DIR__.'/../../geovect/fcoll/database.inc.php';
 use Symfony\Component\Yaml\Yaml;
 
 function geoinfra(string $dbParams, string $script_path, string $path_info, callable $errorCallback): array {
-  if (0) { // log
+  if (1) { // log
+    
     file_put_contents(__DIR__.'/log.yaml',Yaml::dump([[
       'date'=> date( DATE_ATOM),
-      'path'=> $script_path.($_SERVER['QUERY_STRING'] ? "?$_SERVER[QUERY_STRING]"  : ''),
+      'path'=> $script_path.$path_info.($_SERVER['QUERY_STRING'] ? "?$_SERVER[QUERY_STRING]"  : ''),
+      '$_GET'=> $_GET,
+      '$_POST'=> $_POST,
       //'$_SERVER'=> $_SERVER,
     ]]), FILE_APPEND);
   }
@@ -57,7 +60,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   // racine = descriptif du catalogue des bases + exemples pour tests
   if (!$path_info || ($path_info=='/')) {
     return [
-      'type'=> 'http://id.georef.eu/geoinfra/geocat',
+      'type'=> 'http://gi.geoapi.fr/types/geocat',
       'title'=> "Catalogue des données et web-services de la géoinfra",
       'self'=> $script_path,
       'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/api"],
@@ -149,7 +152,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
       $items[] = [
         'properties'=> [
-          'type'=> 'http://id.georef.eu/geoinfra/geocat',
+          'type'=> 'http://gi.geoapi.fr/types/geocat',
           'title'=> $tuple['title'],
           'identifier'=> "$script_path/$tuple[id]",
           'deleted'=> $tuple['deleted']<>'false',
@@ -175,7 +178,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     MySql::close();
     if ($tuple['type']=='node') {
       return [
-        'type'=> 'http://id.georef.eu/geoinfra/geocat',
+        'type'=> 'http://gi.geoapi.fr/types/geocat',
         'title'=> $tuple['title'],
         'self'=> "$script_path/$id",
         'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/$id/api"],
@@ -185,7 +188,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     }
     elseif ($tuple['type']=='schemaMySql') {
       return [
-        'type'=> 'http://id.georef.eu/geoinfra/geocat',
+        'type'=> 'http://gi.geoapi.fr/types/geocat',
         'title'=> $tuple['title'],
         'self'=> "$script_path/$id",
         'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/$id/api"],
@@ -228,7 +231,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
         //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
         $items[] = [
           'properties'=> [
-            'type'=> 'http://id.georef.eu/geoinfra/geocat',
+            'type'=> 'http://gi.geoapi.fr/types/geocat',
             'title'=> $tuple['title'],
             'identifier'=> "$script_path/$tuple[id]",
             'deleted'=> $tuple['deleted']<>'false',
@@ -249,7 +252,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
         //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
         $items[] = [
           'properties'=> [
-            'type'=> 'http://id.georef.eu/geoinfra/GeoJSON',
+            'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
             'title'=> "$tuple[table_name]",
             'identifier'=> "$script_path/$id/collections/$tuple[table_name]",
             'deleted'=> false,
@@ -276,11 +279,14 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   if (preg_match('!^/([^/]+)/collections/([^/]+)$!', $path_info, $matches)) {
     $basename = $matches[1];
     $collname = $matches[2];
+    $table = new \fcoll\Table('', $dbParams, "$basename.$collname");
     return [
+      'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
       'title'=> $collname,
       'self'=> "$script_path/$basename/collections/$collname",
       'schema'=> "$script_path/$basename/collections/$collname/schema",
       'items'=> "$script_path/$basename/collections/$collname/items",
+      'bbox'=> $table->bbox([])->asArray(),
     ];
   }
 
@@ -329,7 +335,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
       $criteria = array_merge($criteria, $_POST);
     foreach ($criteria as $name => $value) {
       if ($name == 'bbox')
-        $criteria['bbox'] = json_decode($criteria['bbox']);
+        $criteria['bbox'] = explode(',', $criteria['bbox']);
     }
     $table = new \fcoll\Table('', $dbParams, "$schemaname.$collname");
     header('Content-type: application/json');
@@ -340,7 +346,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     ];
     if ($criteria)
       $query['criteria'] = $criteria;
-    echo '"query":',json_encode($query),",\n";
+    //echo '"query":',json_encode($query),",\n";
     echo '"features":[',"\n";
     $first = true;
     foreach ($table->features($criteria) as $feature) {
@@ -349,6 +355,8 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     }
     die("\n]}\n");
   }
+
+  return [];
 }
 
 
@@ -397,5 +405,5 @@ die(json_encode([
   '$_SERVER'=> $_SERVER,
   '$_GET'=> $_GET,
   '$_POST'=> $_POST,
-  'error'=> "No match on path_info",
+  'error'=> "No match on path_info='$path_info'",
 ]));  

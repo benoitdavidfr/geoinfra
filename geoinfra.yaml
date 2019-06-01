@@ -21,19 +21,23 @@ specs:
         - les web-services de consultation de tuiles (de facto XYZ standard) (tiles)
         - les services OGC-WMS (wms)
         - les catalogues (geocat) qui exposent une arborescence des web-services et des cartes
+      - de plus l'infra peut référencer des web-services de traitement de données, tels que:
+        - service de géocodage
+        - service de transformation de coordonnées
+        - ...
   geojson:
     - un web-service GeoJSON expose une FeatureCollection
     - est identifié par un URI de base noté {gjuri}
     - définit les URL suivantes:
       - {gjuri} renvoie la description du service et les MD de la collection
-        - type=http://id.georef.eu/geoinfra/GeoJSON
+        - type=http://gi.geoapi.fr/types/GeoJSON
       - {gjuri}/api renvoie la définition de l'API de la collection {gjuri}
       - {gjuri}/schema renvoie le schema des propriétés des objets de la collection {gjuri}
       - {gjuri}/items renvoie le contenu de la collection {gjuri}
       - {gjuri}/items?{criteria} renvoie une sélection de la collection {gjuri} définie par {criteria}
       - {gjuri}/items/{fid} renvoie l'objet {fid} de la collection {gjuri}
     examples:
-      - http://gi.geoapi.fr/ne_110m/collections/coastline - la table coastline du schema ne_110m du serveur MySql
+      - http://gi.geoapi.fr/ne_110m/collections/coastline - la collection coastline de NE 1/110 M
       - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline
         - le fichier /geovect/fcoll/ne110m/coastline.geojson
   tiles:
@@ -41,20 +45,21 @@ specs:
     - est identifié par un URI noté {tileuri}
     - définit les URL suivantes:
       - {tileuri} renvoie la description du service et de la couche
-        - type=http://id.georef.eu/geoinfra/tile
+        - type=http://gi.geoapi.fr/types/tile
       - {tileuri}/{z}/{x}/{y}.(png|jpg) renvoie l'image correspondant à la tuile
-      - documenta dans https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+      - documenté dans https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
   geocat:
     - un web-service catalogue est implémenté comme un web-service particulier de FeatureCollection
       - type=http://id.georef.eu/geoinfra/geocat
     - est identifié par un URI de base noté {caturi}
     - les Feature de la FeatureCollection sont
-      - des web-services GeoJSON (type=http://id.georef.eu/geoinfra/GeoJSON)
+      - des web-services GeoJSON (type=http://gi.geoapi.fr/types/GeoJSON)
       - des web-services image
       - des web-services de consultation de tuiles (type=http://id.georef.eu/geoinfra/tile)
       - des services WMS (type=http://www.opengis.net/wms)
-      - des cartes (type=http://id.georef.eu/geoinfra/map)
-      - des catalogues (type=http://id.georef.eu/geoinfra/geocat)
+      - des cartes (type=http://gi.geoapi.fr/types/map)
+      - des catalogues (type=http://gi.geoapi.fr/types/geocat)
+      - des web-services de traitement définis par leur API
     - schema minimum des objets
       identifier: URI de l'objet
       title: titre en clair
@@ -66,7 +71,7 @@ specs:
   map:
     - une carte est définie par
     - des métadonnées (titre, ...)
-    - le type http://id.georef.eu/geoinfra/map
+    - le type http://gi.geoapi.fr/types/map
     - une extension définie par un BBox en coordonnées géographiques (GBox)
     - une projection pour l'affichage définie par un code EPSG
     - une liste de couches, chacune soit
