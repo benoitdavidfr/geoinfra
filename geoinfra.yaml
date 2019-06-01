@@ -100,7 +100,18 @@ Mapping:
       url:
         - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline
         - http://{host}/geoinfra/file.php/geovect%2Ffcoll%2Fne110m/collections/coastline/items
-  wfs:
+  wfsDecritEnYaml:
+    title: service WFS décrit par un fichier Yaml
+    urlPatterns:
+      - http://gi.geoapi.fr/{yamlFileId} - le catalogue correspondant au YamlFile
+      - http://gi.geoapi.fr/{yamlFileId}:{theme} - le thème défini dans le YamlFile
+      - http://gi.geoapi.fr/{yamlFileId}/collections/{layer} - une couche définie dans le YamlFile
+  wfsNonDecritEnYaml:
+    title: service WFS NON décrit par un fichier Yaml
+    urlPatterns:
+      - http://gi.geoapi.fr/{wfsId} - le catalogue correspondant au service WFS
+      - http://gi.geoapi.fr/{wfsId}/collections/{featureType} - une couche définie dans le WFS
+    
 
 miseEnOeuvre:
   webservices:

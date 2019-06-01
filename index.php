@@ -40,12 +40,12 @@ journal:
 */
 //require_once __DIR__.'/../../phplib/mysql.inc.php';
 require_once __DIR__.'/../../geovect/fcoll/database.inc.php';
+require_once __DIR__.'/itemsofcollyaml.inc.php';
 
 use Symfony\Component\Yaml\Yaml;
 
 function geoinfra(string $dbParams, string $script_path, string $path_info, callable $errorCallback): array {
   if (1) { // log
-    
     file_put_contents(__DIR__.'/log.yaml',Yaml::dump([[
       'date'=> date( DATE_ATOM),
       'path'=> $script_path.$path_info.($_SERVER['QUERY_STRING'] ? "?$_SERVER[QUERY_STRING]"  : ''),
@@ -171,6 +171,12 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   // "/{id}" - description soit d'un noeud intermédiaire du catalogue soit d'une base MySql composée de tables
   if (preg_match('!^/([^/]+)$!', $path_info, $matches)) {
     $id = $matches[1];
+    //echo "id=$id<br>\n";
+    $themeId = '';
+    if (FALSE !== $pos = strpos($id, ':')) {
+      $themeId = substr($id, $pos+1);
+      $id = substr($id, 0, $pos);
+    }
     $query = "select type, title from ${mysqlSchemaNamePrefix}geoinfra.geocat where id='$id'";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
@@ -196,16 +202,38 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
         'items'=> ['title'=> "liste des collections", 'href'=> "$script_path/$id/items"],
       ];
     }
+    elseif ($tuple['type']=='nodeInYaml') { // l'objet courant est décrit par un fichier Yaml
+      if (!$themeId) {
+        return [
+          'type'=> 'http://gi.geoapi.fr/types/geocat',
+          'title'=> $tuple['title'],
+          'self'=> "$script_path/$id",
+          'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/$id/api"],
+          'schema'=> ['title'=> "schema de description des éléments", 'href'=> "$script_path/$id/schema"],
+          'items'=> ['title'=> "liste des éléments", 'href'=> "$script_path/$id/items"],
+        ];
+      }
+      else {
+        return [
+          'type'=> 'http://gi.geoapi.fr/types/geocat',
+          'title'=> "$tuple[title] - $themeId",
+          'self'=> "$script_path/$id:$themeId",
+          'api'=> ['title'=> "documentation de l'API", 'href'=> "$script_path/$id:$themeId/api"],
+          'schema'=> ['title'=> "schema de description des éléments", 'href'=> "$script_path/$id:$themeId/schema"],
+          'items'=> ['title'=> "liste des éléments", 'href'=> "$script_path/$id:$themeId/items"],
+        ];
+      }
+    }
     else
       $errorCallback(501, ['error'=> "fonctionnalité non implémentée pour type=$tuple[type]"]);
   }
 
   // "/{base}/api" - API des collections de la base
-  if ($path_info == '/api') {
+  if (preg_match('!^/([^/]+)/api$!', $path_info, $matches)) {
     $errorCallback(501, ['error'=> "API definition to be done"]);
   }
 
-  // "/{base}/schema" - schema des collections de la base
+  // "/{id}/schema" - schema des collections de la base
   if (preg_match('!^/([^/]+)/schema$!', $path_info, $matches)) {
     $basename = $matches[1];
     return [
@@ -221,6 +249,12 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
   // "/{id}/items" - soit liste des sous-elts du catalogue soit liste des collections de la base
   if (preg_match('!^/([^/]+)/items$!', $path_info, $matches)) {
     $id = $matches[1];
+    //echo "id=$id<br>\n";
+    $themeId = '';
+    if (FALSE !== $pos = strpos($id, ':')) {
+      $themeId = substr($id, $pos+1);
+      $id = substr($id, 0, $pos);
+    }
     $query = "select type from ${mysqlSchemaNamePrefix}geoinfra.geocat where id='$id'";
     foreach(MySql::query($query) as $tuple) {
       //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
@@ -265,6 +299,44 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
         ];
       }
     }
+    elseif ($tuple['type']=='nodeInYaml') { // l'objet courant est décrit par un fichier Yaml
+      $yaml = Yaml::parseFile(__DIR__."/$id.yaml");
+      //echo "<pre>yaml="; print_r($yaml);
+      if (!$themeId) {
+        foreach (array_keys($yaml['layersByTheme']) as $themeId) {
+          $items[] = [
+            'properties'=> [
+              'type'=> 'http://gi.geoapi.fr/types/geocat',
+              'title'=> $themeId,
+              'identifier'=> "$script_path/$id:$themeId",
+              'deleted'=> false,
+              'modified'=> '2019-05-30T12:00:00+00:00',
+            ],
+            'geometry'=> [
+              'type'=> 'Polygon',
+              'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+            ],
+          ];
+        }
+      }
+      else { // $themeId non vide
+        foreach ($yaml['layersByTheme'][$themeId] as $lyrid => $layer) {
+          $items[] = [
+            'properties'=> [
+              'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
+              'title'=> $layer['title'],
+              'identifier'=> "$script_path/$id/collections/$lyrid",
+              'deleted'=> false,
+              'modified'=> '2019-05-30T12:00:00+00:00',
+            ],
+            'geometry'=> [
+              'type'=> 'Polygon',
+              'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+            ],
+          ];
+        }
+      }
+    }
     else
       $errorCallback(501, ['error'=> "fonctionnalité non implémentée pour type=$tuple[type]"]);
     
@@ -277,17 +349,38 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
 
   // "/{base}/collections/{collname}"
   if (preg_match('!^/([^/]+)/collections/([^/]+)$!', $path_info, $matches)) {
-    $basename = $matches[1];
+    $id = $matches[1];
     $collname = $matches[2];
-    $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$basename.$collname");
-    return [
-      'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
-      'title'=> $collname,
-      'self'=> "$script_path/$basename/collections/$collname",
-      'schema'=> "$script_path/$basename/collections/$collname/schema",
-      'items'=> "$script_path/$basename/collections/$collname/items",
-      'bbox'=> $table->bbox([])->asArray(),
-    ];
+    $query = "select type, title from ${mysqlSchemaNamePrefix}geoinfra.geocat where id='$id'";
+    $tuple = null;
+    foreach(MySql::query($query) as $tuple) {
+      //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
+    }
+    if (!$tuple)
+      die("Erreur ligne ".__LINE__);
+    elseif ($tuple['type'] == 'schemaMySql') {
+      $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$id.$collname");
+      return [
+        'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
+        'title'=> $collname,
+        'self'=> "$script_path/$id/collections/$collname",
+        'schema'=> "$script_path/$id/collections/$collname/schema",
+        'items'=> "$script_path/$id/collections/$collname/items",
+        'bbox'=> $table->bbox([])->asArray(),
+      ];
+    }
+    elseif ($tuple['type'] == 'nodeInYaml') {
+      return [
+        'type'=> 'http://gi.geoapi.fr/types/GeoJSON',
+        'title'=> $collname,
+        'self'=> "$script_path/$id/collections/$collname",
+        'schema'=> "$script_path/$id/collections/$collname/schema",
+        'items'=> "$script_path/$id/collections/$collname/items",
+        'bbox'=> [-180, -90, 180, 90],
+      ];
+    }
+    else
+      die("Erreur ligne ".__LINE__);
   }
 
   // conversion de type MySql -> JSON Schema
@@ -326,9 +419,9 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     ];
   }
 
-  // "/{base}/{table}/items"
+  // "/{base}/collections/{collname}/items"
   if (preg_match('!^/([^/]+)/collections/([^/]+)/items$!', $path_info, $matches)) {
-    $schemaname = $matches[1];
+    $id = $matches[1];
     $collname = $matches[2];
     $criteria = $_GET;
     if (isset($_POST) && $_POST)
@@ -337,23 +430,37 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
       if ($name == 'bbox')
         $criteria['bbox'] = explode(',', $criteria['bbox']);
     }
-    $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$schemaname.$collname");
-    header('Content-type: application/json');
-    echo '{"type":"FeatureCollection",',"\n";
-    $query = [
-      'schema'=> "$script_path/$schemaname",
-      'collection'=> "$script_path/$schemaname/collections/$collname",
-    ];
-    if ($criteria)
-      $query['criteria'] = $criteria;
-    //echo '"query":',json_encode($query),",\n";
-    echo '"features":[',"\n";
-    $first = true;
-    foreach ($table->features($criteria) as $feature) {
-      echo ($first ? '':",\n"),json_encode($feature);
-      $first = false;
+    $query = "select type, title from ${mysqlSchemaNamePrefix}geoinfra.geocat where id='$id'";
+    $tuple = null;
+    foreach(MySql::query($query) as $tuple) {
+      //echo "<pre>tuple="; print_r($tuple); echo "</pre>\n";
     }
-    die("\n]}\n");
+    if (!$tuple)
+      die("Erreur ligne ".__LINE__);
+    elseif ($tuple['type'] == 'schemaMySql') {
+      $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$schemaname.$collname");
+      header('Content-type: application/json');
+      echo '{"type":"FeatureCollection",',"\n";
+      $query = [
+        'schema'=> "$script_path/$schemaname",
+        'collection'=> "$script_path/$schemaname/collections/$collname",
+      ];
+      if ($criteria)
+        $query['criteria'] = $criteria;
+      //echo '"query":',json_encode($query),",\n";
+      echo '"features":[',"\n";
+      $first = true;
+      foreach ($table->features($criteria) as $feature) {
+        echo ($first ? '':",\n"),json_encode($feature);
+        $first = false;
+      }
+      die("\n]}\n");
+    }
+    elseif ($tuple['type'] == 'nodeInYaml') {
+      return itemsOfCollectionDefYaml($id, $collname, $criteria);
+    }
+    else
+      die("Erreur ligne ".__LINE__);
   }
 
   return [];
