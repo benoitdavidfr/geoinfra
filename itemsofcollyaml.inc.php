@@ -4,6 +4,12 @@ name: itemsofcollyaml.inc.php
 title: itemsofcollyaml.inc.php - définition de itemsOfCollectionDefYaml()
 doc: |
   Lecture du contenu d'une collection définie par le fichier Yaml
+  Nombreuses améliorations à faire
+    - pagination
+    - prise en compte des criteres
+journal:
+  1/6/2019:
+    - première version rapide de l'utilisation d'un WFS server JSON
 */
 require_once __DIR__.'/wfsjson.inc.php';
 

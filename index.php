@@ -273,7 +273,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
           ],
           'geometry'=> [
             'type'=> 'Polygon',
-            'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+            'coordinates'=> [[[-180,-85],[-180,85],[180,85],[180,-85],[-180,-85]]],
           ],
         ];
       }
@@ -294,7 +294,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
           ],
           'geometry'=> [
             'type'=> 'Polygon',
-            'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+            'coordinates'=> [[[-180,-85],[-180,85],[180,85],[180,-85],[-180,-85]]],
           ],
         ];
       }
@@ -314,7 +314,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
             ],
             'geometry'=> [
               'type'=> 'Polygon',
-              'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+              'coordinates'=> [[[-180,-85],[-180,85],[180,85],[180,-85],[-180,-85]]],
             ],
           ];
         }
@@ -331,7 +331,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
             ],
             'geometry'=> [
               'type'=> 'Polygon',
-              'coordinates'=> [[[-180,-90],[-180,90],[180,90],[180,-90],[-180,-90]]],
+              'coordinates'=> [[[-180,-85],[-180,85],[180,85],[180,-85],[-180,-85]]],
             ],
           ];
         }
@@ -376,7 +376,7 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
         'self'=> "$script_path/$id/collections/$collname",
         'schema'=> "$script_path/$id/collections/$collname/schema",
         'items'=> "$script_path/$id/collections/$collname/items",
-        'bbox'=> [-180, -90, 180, 90],
+        'bbox'=> [-180, -85, 180, 85],
       ];
     }
     else
@@ -438,12 +438,12 @@ function geoinfra(string $dbParams, string $script_path, string $path_info, call
     if (!$tuple)
       die("Erreur ligne ".__LINE__);
     elseif ($tuple['type'] == 'schemaMySql') {
-      $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$schemaname.$collname");
+      $table = new \fcoll\Table('', $dbParams, "${mysqlSchemaNamePrefix}$id.$collname");
       header('Content-type: application/json');
       echo '{"type":"FeatureCollection",',"\n";
       $query = [
-        'schema'=> "$script_path/$schemaname",
-        'collection'=> "$script_path/$schemaname/collections/$collname",
+        'schema'=> "$script_path/$id",
+        'collection'=> "$script_path/$id/collections/$collname",
       ];
       if ($criteria)
         $query['criteria'] = $criteria;
