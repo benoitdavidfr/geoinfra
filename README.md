@@ -6,9 +6,11 @@
 L'infrastructure de données et de services géographiques définie par la
 [directive Inspire](https://eur-lex.europa.eu/eli/dir/2007/2/oj?locale=fr) se révèle très complexe à mettre en oeuvre
 et difficile à utiliser.
-L'objectif de ce document est de proposer une **nouvelle infrastructure** de données et de services géographiques 
-**plus simple à utiliser** et prenant mieux en compte les
-[recommandations W3C/OGC pour la publication de données géographiques sur le web](https://w3c.github.io/sdw/bp/).
+L'objectif de ce document est de proposer une **nouvelle infrastructure plus simple à utiliser** et prenant mieux en compte
+les [recommandations W3C/OGC pour la publication de données géographiques sur le web](https://w3c.github.io/sdw/bp/).
+
+Pour illustrer cette spécification un prototype a été développé et sera progressivement complété ;
+il est référencé dans les exemples ci-dessous.
 
 ## spécifications de l'infrastructure
 
@@ -18,17 +20,17 @@ Dans cette géoinfra :
       - données vecteur structurées au [format GeoJSON](https://tools.ietf.org/html/rfc7946)
       - données maillées structurées au [format NetCDF](https://fr.wikipedia.org/wiki/NetCDF)
       - données de consultation sous la forme d'images PNG ou JPEG géoréférencées
-      - catalogues de données organisant les 3 éléments ci-dessus
+      - catalogues de données référençant et organisant les 3 éléments ci-dessus
   - les données sont exposées sur le web au travers de 5 types de web-services:
       - les [web-services GeoJSON](#GeoJSON)
       - les web-services de données maillées (à spécifier)
       - les [web-services de consultation tuilés](#tile) (standard de facto XYZ)
       - les services [OGC-WMS](#wms)
-      - les [catalogues](#geocat) qui exposent une arborescence des web-services et des cartes
-  - des [cartes](#map) peuvent être définies afin de faciliter la consultation des données,
+      - les [catalogues](#geocat) exposant une toile des web-services et des cartes
+  - des [cartes](#map) peuvent être définies dans la géoinfra afin de faciliter la consultation des données,
   - des web-services de traitement de données peuvent aussi être référencés, tels que:
       - service de géocodage
-      - service de transformation de coordonnées
+      - service de transformation de coordonnées,
       - ...
 
 ### web-service GeoJSON<a id='GeoJSON'></a>
@@ -38,7 +40,7 @@ Dans cette géoinfra :
 - définit les points d'accès (endpoints) suivants:
   - / renvoie la description du service et les métadonnées de la collection
       - ce document a pour type `http://gi.geoapi.fr/types/GeoJSON`
-  - `/api` renvoie la définition de l'API de la collection
+  - `/api` renvoie la définition de l'API d'accès à la collection
   - `/schema` renvoie le schéma des propriétés des objets de la collection
   - `/items` renvoie les objets (Feature) de la collection
   - `/items?{criteria}` renvoie une sélection de la collection définie par `{criteria}`
@@ -74,10 +76,10 @@ Dans cette géoinfra :
   - / renvoie la description du service et de la couche
       - ce document a pour type http://gi.geoapi.fr/types/tile
   - `/{z}/{x}/{y}.(png|jpg)` renvoie l'image correspondant à la tuile
-      - documenté dans https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames
+      - documenté dans <https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames>
 
 On reprend ici un format très utilisé sur le web et popularisé par OSM
-en lui ajoutant cependant l'utilisation d'une URI correspondant à la description du service et de la couche.
+en lui ajoutant cependant l'utilisation d'une URI correspondant à la description du service et les métadonnées de la couche.
 
 #### exemples
 
@@ -86,7 +88,7 @@ en lui ajoutant cependant l'utilisation d'une URI correspondant à la descriptio
 
 ### web-service de consultation WMS<a id='wms'></a>
 
-Les services OGC-WMS sont très utilisés et cette utilisation est assez simple.
+Les services OGC-WMS sont très utilisés et d'utilisation assez simple.
 De plus, ils sont nécessaires pour réaliser des cartes dans une projection autre que WebMercator.
 Ils peuvent donc être intégrés dans géoinfra en utilisant comme URI l'URL du service sans paramètre
 
