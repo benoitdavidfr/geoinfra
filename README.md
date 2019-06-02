@@ -1,4 +1,4 @@
-# géoinfra - une infrastructure de données et de services géograhiques
+# géoinfra - une infrastructure de données et de services géographiques
 2 juin 2019 (en cours)
 
 ### introduction
