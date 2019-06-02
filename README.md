@@ -1,5 +1,5 @@
 # géoinfra - une infrastructure de données et de services géograhiques
-2 juin 2019
+2 juin 2019 (en cours)
 
 ### introduction
 
