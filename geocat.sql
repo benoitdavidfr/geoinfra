@@ -10,7 +10,14 @@ doc: |
     - un schema PgSql (à faire)
     - un service WFS
     - un sous-catalogue écrit par un fichier Yaml (nodeInYaml)
+
+  Questions:
+    - pourquoi stocker ces infos dans MySql ?
+    - pourquoi ne pas les stocker dans un fichier Yaml ?
+    - comment la mettre à jour ?
 journal: |
+  1/6/2019:
+    ajout de tile
   1/6/2019:
     ajout wfsService et nodeInYaml
   31/5/2019:
@@ -20,7 +27,7 @@ drop table if exists geocat;
 create table if not exists geocat (
   id varchar(255) not null PRIMARY KEY comment "id court",
   parent varchar(255) comment "id du parent ou null",
-  type enum('node','schemaMySql','schemaPgSql','wfsService','nodeInYaml') not null comment "type de l'élément",
+  type enum('node','schemaMySql','schemaPgSql','tile','wfsService','nodeInYaml') not null comment "type de l'élément",
   title varchar(255) not null comment "titre de l'élément",
   deleted enum('true','false') not null default 'false' comment "'true' ssi l'élément a été supprimé",
   modified datetime not null comment "date et heure de dernière modification de l'élément",
@@ -61,6 +68,21 @@ INSERT INTO geocat(id, parent, type, title, modified, geom) VALUES
   'bdcarto', 'ign', 'nodeInYaml',
   'Base IGN BD Carto', now(),
   ST_GeomFromText('POLYGON((-5.15 41.33,-5.15 51.09,9.56 51.09,9.56 41.33,-5.15 41.33))')
+),
+(
+  'igngp', null, 'node',
+  'Ressources de consultation IGN', now(),
+  ST_GeomFromText('POLYGON((-180 -90,-180 90,180 90,180 -90,-180 -90))')
+),
+(
+  'http://igngp.geoapi.fr/tile.php/cartes', 'igngp', 'tile',
+  'Cartes', now(),
+  ST_GeomFromText('POLYGON((-180 -90,-180 90,180 90,180 -90,-180 -90))')
+),
+(
+  'http://igngp.geoapi.fr/tile.php/orthos', 'igngp', 'tile',
+  'Ortho-images', now(),
+  ST_GeomFromText('POLYGON((-180 -90,-180 90,180 90,180 -90,-180 -90))')
 );
 INSERT INTO geocat(id, parent, type, title, modified, extra, geom) VALUES
 (

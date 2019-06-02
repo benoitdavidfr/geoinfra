@@ -6,7 +6,7 @@ doc: |
   Lecture du contenu d'une collection définie par le fichier Yaml
   Nombreuses améliorations à faire
     - pagination
-    - prise en compte des criteres
+    - prise en compte des criteres de sélection
 journal:
   1/6/2019:
     - première version rapide de l'utilisation d'un WFS server JSON

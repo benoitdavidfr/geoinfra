@@ -27,6 +27,10 @@ doc: |
     
   Un navigateur est défini dans /gexplor/gibrowse
   
+  A faire:
+    - utilisation des ressources de consultation
+    - encoder l'id dans les URI !
+  
 journal: |
   1/6/2019:
     - correction bugs détectés grâce à gibrowse
